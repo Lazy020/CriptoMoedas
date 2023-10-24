@@ -1,38 +1,72 @@
-import {useEffect, useState} from 'react'
+import {useEffect, useState, FormEvent} from 'react'
 import styles from "./home.module.css"
 import { HiMiniMagnifyingGlass } from "react-icons/hi2";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+
 
 
 //https://sujeitoprogramador.com/api-cripto/?key=cc333fdc79bbecb8
 
+interface CoinProps{
+    name: string;
+    delta_24h: string;
+    price: string;
+    symbol: string;
+    volume_24h: string;
+    market_cap: string;
+    formatedPrice: string;
+    formatedMarket: string;
+}
 
 
 export function Home (){
 
-    const [coins, setCoins] = useState()
+    const [coins, setCoins] = useState<CoinProps[]>([])
+    const [inputValor, setInputValor] = useState("")
+    const navigate = useNavigate();
 
     useEffect(()=>{
         async function getData() {
-            fetch('https://sujeitoprogramador.com/api-cripto/?key=cc333fdc79bbecb8&pref=BRL')
+            fetch('https://sujeitoprogramador.com/api-cripto/?key=3461ccb664325f2f&pref=BRL')
             .then(response => response.json())
             .then((data)=>{
                 let coinsData = data.coins.slice(0,15);
-                console.log(coinsData);
+                
+                let price = Intl.NumberFormat ("pt-BR",{
+
+                    style: "currency",
+                    currency:"BRL"
+                })
+                const FormatResult = coinsData.map((item) => {
+                    const formated={
+                        ...item,
+                        formatedPrice:price.format(Number(item.price)),
+                        formatedMarket:price.format(Number(item.market_cap))
+                    }
+                    return formated;
+                })
+                setCoins(FormatResult);
             })
         }
 
         getData();
     },[])
 
+    function pesquisa(e: FormEvent){
+        e.preventDefault();
+        if(inputValor ==="") return;
 
+        navigate(`/detail/${inputValor}`)
+    }
 
 
     return(
         <main className={styles.container}>
-            <form className={styles.form}>
+            <form className={styles.form} onSubmit={pesquisa}>
                 <input 
                 placeholder="Digite o simbolo da moeda: BTC.."
+                value ={inputValor}
+                onChange={ (e) => setInputValor(e.target.value)}
                 />
                 <button type="submit">
                 <HiMiniMagnifyingGlass size={30} color="#fff"/>
@@ -55,23 +89,24 @@ export function Home (){
                 </thead>
 
                 <tbody id="tbody">
+                    {coins.map( coin => (
                     <tr className={styles.tr}>
                         <td className={styles.tdLabel} data-label="Moeda">
-                            <Link  className={styles.link} to="/detail/btc">
-                                <span>Bitcoin</span> | BTC
+                            <Link className={styles.link} to={`/detail/btc/${coin.symbol}`}>
+                                <span>{coin.name}</span> | {coin.symbol}
                             </Link>
                         </td>
-                        <td className={styles.tdLabel}>
-                            R$19293
+                        <td className={styles.tdLabel} data-label="Mercado">
+                            {coin.formatedMarket}
                         </td>
-                        <td className={styles.tdLabel}>
-                            R$40.962
+                        <td className={styles.tdLabel} data-label="Preço">
+                            {coin.formatedPrice}
                         </td>
-                        <td className={styles.tdLoss}>
-                            <span> -5.3</span>
+                        <td className={Number(coin?.delta_24h) >= 0? styles.tdProfit : styles.tdLoss} data-label="delta_24h">
+                            <span> {coin.delta_24h}</span>
                         </td>
                     </tr>
-
+                    ))}
                 </tbody>
 
             </table>
